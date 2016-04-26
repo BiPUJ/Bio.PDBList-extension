@@ -18,6 +18,8 @@
 # Any maintainer of the Biopython code may change this notice
 # when appropriate.
 
+# (c) 2016 Wiktoria Karwicka
+
 """ Access the PDB over the internet (e.g. to download structures). """
 
 from __future__ import print_function
@@ -30,6 +32,7 @@ import shutil
 # Importing these functions with leading underscore as not intended for reuse
 from Bio._py3k import urlopen as _urlopen
 from Bio._py3k import urlretrieve as _urlretrieve
+import tarfile
 
 __docformat__ = "restructuredtext en"
 
@@ -307,6 +310,130 @@ class PDBList(object):
         _urlretrieve(url, savefile)
 
 
+    #na wzor sciagania PBD --> co z obsolete?
+    #aby wywolac funkcje nalezy wpisac "mmcif" przed podaniem dalszych argumentow (inaczej domyslnie wywolywane jest PDB)
+    def download_mmcif_file(self, mmcif_code, obsolete=False, pdir=None):
+        """ Retrieves a mmCIF structure file from the PDB server and
+        stores it in a local file tree.
+
+        The PDB structure's file name is returned as a single string.
+        If obsolete ``==`` True, the file will be saved in a special file tree.
+
+        @param pdir: put the file in this directory (default: create a PDB-style directory tree)
+        @type pdir: string
+
+        @return: filename
+        @rtype: string
+        """
+        # Get the compressed PDB structure
+        code = mmcif_code.lower()
+        archive_fn = "%s.cif.gz" % code
+        pdb_dir = "divided" if not obsolete else "obsolete"
+        url = (self.pdb_server +
+               '/pub/pdb/data/structures/%s/mmCIF/%s/%s' %
+               (pdb_dir, code[1:3], archive_fn))
+
+        # Where does the final mmCIF file get saved?
+        if pdir is None:
+            path = self.local_pdb if not obsolete else self.obsolete_pdb
+            if not self.flat_tree:  # Put in PDB-style directory tree
+                path = os.path.join(path, code[1:3])
+        else:  # Put in specified directory
+            path = pdir
+        if not os.access(path, os.F_OK):
+            os.makedirs(path)
+
+        filename = os.path.join(path, archive_fn)
+        final_file = os.path.join(path, "%s.cif" % code)  # (decompressed)
+
+        # Skip download if the file already exists
+        if not self.overwrite:
+            if os.path.exists(final_file):
+                print("Structure exists: '%s' " % final_file)
+                return final_file
+
+        # Retrieve the file
+        print("Downloading mmCIF structure '%s'..." % mmcif_code)
+        _urlretrieve(url, filename)
+
+        # Uncompress the archive, delete when done
+        # Can't use context manager with gzip.open until Python 2.7
+        gz = gzip.open(filename, 'rb')
+        with open(final_file, 'wb') as out:
+            out.writelines(gz)
+        gz.close()
+        os.remove(filename)
+
+        return final_file
+
+
+
+    # na wzor sciagania PBD --> co z obsolete?
+    # aby wywolac funkcje nalezy wpisac "big" przed podaniem dalszych argumentow (inaczej domyslnie wywolywane jest PDB)
+    # zostawic tar, rozpakowac, zszywac te pliki w jeden czy zostawic w paru plikach?
+    # jesli zszywac to z (jakim) rozszerzeniem?
+    def download_big_pdb_file(self, pdb_code, obsolete=False, pdir=None):
+        """ Retrieves a big PDB structure file from the PDB server and
+        stores it in a local file tree. This structure is originally contained in tar.gz archive
+        because it is too big to be stored in only one PDB file.
+
+        The PDB structure's file name is returned as a single string.
+        If obsolete ``==`` True, the file will be saved in a special file tree.
+
+        @param pdir: put the file in this directory (default: create a PDB-style directory tree)
+        @type pdir: string
+
+        @return: filename
+        @rtype: string
+        """
+        # Get the compressed PDB structure
+        code = pdb_code.lower()
+        archive_fn = "%s-pdb-bundle.tar.gz" % code
+        url = (self.pdb_server +
+               '/pub/pdb/compatible/pdb_bundle/%s/%s/%s' %
+               (code[1:3], code, archive_fn))
+
+        # Where does the final PDB archive file get saved?
+        if pdir is None:
+            path = self.local_pdb if not obsolete else self.obsolete_pdb
+            if not self.flat_tree:  # Put in PDB-style directory tree
+                path = os.path.join(path, code[1:3])
+        else:  # Put in specified directory
+            path = pdir
+        if not os.access(path, os.F_OK):
+            os.makedirs(path)
+
+        filename = os.path.join(path, archive_fn)
+        final_file = os.path.join(path, "%s-pdb-bundle" % code)  # (decompressed)
+
+        # Skip download if the file already exists
+        if not self.overwrite:
+            if os.path.exists(final_file):
+                print("Structure exists: '%s' " % final_file)
+                return final_file
+
+        # Retrieve the file
+        print("Downloading big PDB structure '%s'..." % pdb_code)
+        _urlretrieve(url, filename)
+
+        # Uncompress the archive, delete when done
+        # Can't use context manager with gzip.open until Python 2.7
+
+        # w razie zostawiania kilku plikow rozpakowanych
+        # tar = tarfile.open(filename)
+        # tar.extractall()
+        # tar.close()
+
+        #analogicznie do istniejacej juz implementacji w PDBList spinam wszystko w jeden
+        gz = gzip.open(filename, 'rb')
+        with open(final_file, 'wb') as out:
+            out.writelines(gz)
+        gz.close()
+        os.remove(filename)
+
+        return final_file
+
+
 if __name__ == '__main__':
 
     import sys
@@ -358,6 +485,13 @@ if __name__ == '__main__':
             # get all obsolete entries
             pl.download_obsolete_entries(pdb_path)
 
+        elif sys.argv[1] == 'mmcif' and len(sys.argv[2]) == 4 and sys.argv[2][0].isdigit():
+            pl.download_mmcif_file(sys.argv[2], pdir=pdb_path)
+
+        elif sys.argv[1] == 'big' and len(sys.argv[2]) == 4 and sys.argv[2][0].isdigit():
+            pl.download_big_pdb_file(sys.argv[2], pdir=pdb_path)
+
         elif len(sys.argv[1]) == 4 and sys.argv[1][0].isdigit():
             # get single PDB entry
             pl.retrieve_pdb_file(sys.argv[1], pdir=pdb_path)
+
