@@ -205,6 +205,8 @@ class PDBList(object):
         if not os.access(path, os.F_OK):
             os.makedirs(path)
 
+        print(path)
+
         filename = os.path.join(path, archive_fn)
         final_file = os.path.join(path, "pdb%s.ent" % code)  # (decompressed)
 
@@ -309,9 +311,6 @@ class PDBList(object):
         url = self.pdb_server + '/pub/pdb/derived_data/pdb_seqres.txt'
         _urlretrieve(url, savefile)
 
-
-    #na wzor sciagania PBD --> co z obsolete?
-    #aby wywolac funkcje nalezy wpisac "mmcif" przed podaniem dalszych argumentow (inaczej domyslnie wywolywane jest PDB)
     def download_mmcif_file(self, mmcif_code, obsolete=False, pdir=None):
         """ Retrieves a mmCIF structure file from the PDB server and
         stores it in a local file tree.
@@ -319,11 +318,20 @@ class PDBList(object):
         The PDB structure's file name is returned as a single string.
         If obsolete ``==`` True, the file will be saved in a special file tree.
 
+        To execute function add "mmcif" before further arguments (otherwise will download "small" PBD file by default).
+
+        @param mmcif_code: structure Id from PDB (e.g. 3J92).
+        @type mmcif_code: str
+
+        @param obsolete: if true download all obsolete files to created obsolete folder (otherwise folder remains empty)
+        (default: False)
+        @type obsolete: bool
+
         @param pdir: put the file in this directory (default: create a PDB-style directory tree)
-        @type pdir: string
+        @type pdir: str
 
         @return: filename
-        @rtype: string
+        @rtype: str
         """
         # Get the compressed PDB structure
         code = mmcif_code.lower()
@@ -366,13 +374,7 @@ class PDBList(object):
 
         return final_file
 
-
-
-    # na wzor sciagania PBD --> co z obsolete?
-    # aby wywolac funkcje nalezy wpisac "big" przed podaniem dalszych argumentow (inaczej domyslnie wywolywane jest PDB)
-    # zostawic tar, rozpakowac, zszywac te pliki w jeden czy zostawic w paru plikach?
-    # jesli zszywac to z (jakim) rozszerzeniem?
-    def download_big_pdb_file(self, pdb_code, obsolete=False, pdir=None):
+    def download_big_pdb_file(self, pdb_code, obsolete=False, pdir=None, unzip=False):
         """ Retrieves a big PDB structure file from the PDB server and
         stores it in a local file tree. This structure is originally contained in tar.gz archive
         because it is too big to be stored in only one PDB file.
@@ -380,11 +382,24 @@ class PDBList(object):
         The PDB structure's file name is returned as a single string.
         If obsolete ``==`` True, the file will be saved in a special file tree.
 
-        @param pdir: put the file in this directory (default: create a PDB-style directory tree)
-        @type pdir: string
+        To execute function add "big" before further arguments (otherwise will download "small" PBD file by default).
+
+        @param pdb_code: structure Id from PDB (e.g. 3J92).
+        @type pdb_code: str
+
+        @param obsolete: if true download all obsolete files to created obsolete folder (otherwise folder remains empty)
+        (default: False)
+        @type obsolete: bool
+
+        @param pdir: puts the file in this directory (default: create a PDB-style directory tree)
+        @type pdir: str
+
+        @param unzip: if true decompresses downloaded tar archive in created folder (also leaves extra tar archive
+        for other purposes) otherwise the file remains compressed (default: False)
+        @type unzip: bool
 
         @return: filename
-        @rtype: string
+        @rtype: str
         """
         # Get the compressed PDB structure
         code = pdb_code.lower()
@@ -404,7 +419,8 @@ class PDBList(object):
             os.makedirs(path)
 
         filename = os.path.join(path, archive_fn)
-        final_file = os.path.join(path, "%s-pdb-bundle" % code)  # (decompressed)
+        #if not unzip:
+        final_file = os.path.join(path, "%s-pdb-bundle.tar" % code)  # (compressed)
 
         # Skip download if the file already exists
         if not self.overwrite:
@@ -416,23 +432,20 @@ class PDBList(object):
         print("Downloading big PDB structure '%s'..." % pdb_code)
         _urlretrieve(url, filename)
 
+        # Download the tar file
+        if not unzip:
+            gz = gzip.open(filename, 'rb')
+            with open(final_file, 'wb') as out:
+                out.writelines(gz)
+            gz.close()
+            os.remove(filename)
         # Uncompress the archive, delete when done
-        # Can't use context manager with gzip.open until Python 2.7
-
-        # w razie zostawiania kilku plikow rozpakowanych
-        # tar = tarfile.open(filename)
-        # tar.extractall()
-        # tar.close()
-
-        #analogicznie do istniejacej juz implementacji w PDBList spinam wszystko w jeden
-        gz = gzip.open(filename, 'rb')
-        with open(final_file, 'wb') as out:
-            out.writelines(gz)
-        gz.close()
-        os.remove(filename)
+        else:
+            tar = tarfile.open(filename)
+            tar.extractall(path=path)
+            tar.close()
 
         return final_file
-
 
 if __name__ == '__main__':
 
@@ -486,10 +499,10 @@ if __name__ == '__main__':
             pl.download_obsolete_entries(pdb_path)
 
         elif sys.argv[1] == 'mmcif' and len(sys.argv[2]) == 4 and sys.argv[2][0].isdigit():
-            pl.download_mmcif_file(sys.argv[2], pdir=pdb_path)
+            pl.download_mmcif_file(sys.argv[2], obsolete=False, pdir=pdb_path)
 
         elif sys.argv[1] == 'big' and len(sys.argv[2]) == 4 and sys.argv[2][0].isdigit():
-            pl.download_big_pdb_file(sys.argv[2], pdir=pdb_path)
+            pl.download_big_pdb_file(sys.argv[2], obsolete=False, pdir=pdb_path, unzip=False)
 
         elif len(sys.argv[1]) == 4 and sys.argv[1][0].isdigit():
             # get single PDB entry
