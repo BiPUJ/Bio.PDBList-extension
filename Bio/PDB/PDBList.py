@@ -333,7 +333,7 @@ class PDBList(object):
         @return: filename
         @rtype: str
         """
-        # Get the compressed PDB structure
+        # Get the compressed mmCIF structure
         code = mmcif_code.lower()
         archive_fn = "%s.cif.gz" % code
         pdb_dir = "divided" if not obsolete else "obsolete"
@@ -502,7 +502,7 @@ if __name__ == '__main__':
             pl.download_mmcif_file(sys.argv[2], obsolete=False, pdir=pdb_path)
 
         elif sys.argv[1] == 'big' and len(sys.argv[2]) == 4 and sys.argv[2][0].isdigit():
-            pl.download_big_pdb_file(sys.argv[2], obsolete=False, pdir=pdb_path, unzip=False)
+            pl.download_big_pdb_file(sys.argv[2], obsolete=False, pdir=pdb_path, unzip=True)
 
         elif len(sys.argv[1]) == 4 and sys.argv[1][0].isdigit():
             # get single PDB entry

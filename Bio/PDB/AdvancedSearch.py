@@ -15,6 +15,7 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 from enum import Enum
 import requests
 from Bio.PDB.PDBList import PDBList
+import os.path
 
 """
  This class provides advanced search on PDB server.
@@ -3494,6 +3495,7 @@ class AdvancedSearch():
         url = 'http://www.rcsb.org/pdb/rest/search'
         req = requests.post(url, headers=headers, data=tostring(self.query).decode())
         self.search = req.text.split('\n')
+        self.search = self.search[:-1]
 
     # Download search results
     def download(self, file_type, obsolete=False, pdir=None):
@@ -3512,9 +3514,10 @@ class AdvancedSearch():
 
         if file_type == "pdb":
             for i in self.search:
-                print(i)
-                file = PDBList()
-                file.retrieve_pdb_file(i, obsolete, pdir)
+                if i != "":
+                    print(i)
+                    file = PDBList()
+                    file.retrieve_pdb_file(i, obsolete, pdir)
         elif file_type == "mmcif":
             for i in self.search:
                 file = PDBList()
@@ -3536,8 +3539,9 @@ if __name__ == '__main__':
     print(doc)
 
     as_prop = AdvancedSearch()
-    as_prop.structure_title(StructComparator.Starts_with, 'Solution')
-    as_prop.number_of_chains_ba('5', '6')
+    # as_prop.structure_title(StructComparator.Starts_with, 'DNA')
+    # as_prop.number_of_chains_ba('5', '6')
+    as_prop.pdb_id_s('2fl0')
 
     as_prop.send()
 
@@ -3545,7 +3549,7 @@ if __name__ == '__main__':
     if result == "":
         print("Failed")
     else:
-        print(result[:-1])
-        print("Found ", len(result)-1, "results")
+        print(result)
+        print("Found ", len(result), "results")
 
     as_prop.download("pdb")
