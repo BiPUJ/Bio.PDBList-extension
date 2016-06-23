@@ -3364,8 +3364,7 @@ class AdvancedSearch():
         self.counter += 1
 
     # Publication
-    # co z pubmedID na str, bo chyba nie dziala?
-    def citation(self, author_name, title_comparator, citation_title, pubmed_id, primary_citation_only, journal,
+    def citation(self, author_name, title_comparator, citation_title, primary_citation_only, journal,
                  year_comparator, year):
         """Builds a query for Methods search purposes with specification EM Assembly.
 
@@ -3497,6 +3496,15 @@ class AdvancedSearch():
         self.search = req.text.split('\n')
         self.search = self.search[:-1]
 
+    # Clear all query and results
+    def clear(self):
+        """
+        Clear query and results.
+        """
+        self.query.clear()
+        self.search = {}
+        self.counter = 0
+
     # Download search results
     def download(self, file_type, obsolete=False, pdir=None):
         """Downloads files listed in performed search.
@@ -3514,10 +3522,9 @@ class AdvancedSearch():
 
         if file_type == "pdb":
             for i in self.search:
-                if i != "":
-                    print(i)
-                    file = PDBList()
-                    file.retrieve_pdb_file(i, obsolete, pdir)
+                print(i)
+                file = PDBList()
+                file.retrieve_pdb_file(i, obsolete, pdir)
         elif file_type == "mmcif":
             for i in self.search:
                 file = PDBList()
@@ -3526,6 +3533,8 @@ class AdvancedSearch():
             for i in self.search:
                 file = PDBList()
                 file.download_big_pdb_file(i, obsolete, pdir)
+        else:
+            print("Wrong file type. Must equal pbd, mmcif or big")
 
 if __name__ == '__main__':
 

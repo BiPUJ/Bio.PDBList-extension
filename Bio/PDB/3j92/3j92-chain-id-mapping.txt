@@ -1,0 +1,60 @@
+    New chain ID            Original chain ID
+
+3j92-pdb-bundle1.pdb:
+           A                         A
+           B                         B
+           C                         C
+           D                         D
+           E                         E
+           F                         F
+           G                         G
+           H                         H
+           I                         I
+           J                         J
+           L                         L
+           M                         M
+           N                         N
+           O                         O
+           P                         P
+           Q                         Q
+           R                         R
+           S                         S
+           T                         T
+           U                         U
+           V                         V
+           W                         W
+           X                         X
+           Y                         Y
+           Z                         Z
+           a                         a
+           b                         b
+           c                         c
+           d                         d
+           e                         e
+           f                         f
+           g                         g
+           h                         h
+           i                         i
+           j                         j
+           k                         k
+           l                         l
+           m                         m
+           o                         o
+           p                         p
+           r                         r
+           s                         s
+           t                         t
+           u                         u
+           v                         v
+           w                         w
+           x                         x
+           y                         y
+           z                         z
+           0                         0
+           1                         1
+           2                         2
+
+3j92-pdb-bundle2.pdb:
+           5                         5
+           7                         7
+           8                         8

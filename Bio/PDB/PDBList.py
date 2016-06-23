@@ -32,6 +32,7 @@ import shutil
 # Importing these functions with leading underscore as not intended for reuse
 from Bio._py3k import urlopen as _urlopen
 from Bio._py3k import urlretrieve as _urlretrieve
+from urllib import error
 import tarfile
 
 __docformat__ = "restructuredtext en"
@@ -188,45 +189,51 @@ class PDBList(object):
         @rtype: string
         """
         # Get the compressed PDB structure
-        code = pdb_code.lower()
-        archive_fn = "pdb%s.ent.gz" % code
-        pdb_dir = "divided" if not obsolete else "obsolete"
-        url = (self.pdb_server +
-               '/pub/pdb/data/structures/%s/pdb/%s/%s' %
-               (pdb_dir, code[1:3], archive_fn))
+        if len(pdb_code) != 4:
+            print("ID code must contain only 4 letters")
+        else:
+            try:
+                code = pdb_code.lower()
+                archive_fn = "pdb%s.ent.gz" % code
+                pdb_dir = "divided" if not obsolete else "obsolete"
+                url = (self.pdb_server +
+                       '/pub/pdb/data/structures/%s/pdb/%s/%s' %
+                       (pdb_dir, code[1:3], archive_fn))
 
-        # Where does the final PDB file get saved?
-        if pdir is None:
-            path = self.local_pdb if not obsolete else self.obsolete_pdb
-            if not self.flat_tree:  # Put in PDB-style directory tree
-                path = os.path.join(path, code[1:3])
-        else:  # Put in specified directory
-            path = pdir
-        if not os.access(path, os.F_OK):
-            os.makedirs(path)
+                # Where does the final PDB file get saved?
+                if pdir is None:
+                    path = self.local_pdb if not obsolete else self.obsolete_pdb
+                    if not self.flat_tree:  # Put in PDB-style directory tree
+                        path = os.path.join(path, code[1:3])
+                else:  # Put in specified directory
+                    path = pdir
+                if not os.access(path, os.F_OK):
+                    os.makedirs(path)
 
-        print(path)
+                print(path)
 
-        filename = os.path.join(path, archive_fn)
-        final_file = os.path.join(path, "pdb%s.ent" % code)  # (decompressed)
+                filename = os.path.join(path, archive_fn)
+                final_file = os.path.join(path, "pdb%s.ent" % code)  # (decompressed)
 
-        # Skip download if the file already exists
-        if not self.overwrite:
-            if os.path.exists(final_file):
-                print("Structure exists: '%s' " % final_file)
-                return final_file
+                # Skip download if the file already exists
+                if not self.overwrite:
+                    if os.path.exists(final_file):
+                        print("Structure exists: '%s' " % final_file)
+                        return final_file
 
-        # Retrieve the file
-        print("Downloading PDB structure '%s'..." % pdb_code)
-        _urlretrieve(url, filename)
+                # Retrieve the file
+                print("Downloading PDB structure '%s'..." % pdb_code)
+                _urlretrieve(url, filename)
 
-        # Uncompress the archive, delete when done
-        # Can't use context manager with gzip.open until Python 2.7
-        gz = gzip.open(filename, 'rb')
-        with open(final_file, 'wb') as out:
-            out.writelines(gz)
-        gz.close()
-        os.remove(filename)
+                # Uncompress the archive, delete when done
+                # Can't use context manager with gzip.open until Python 2.7
+                gz = gzip.open(filename, 'rb')
+                with open(final_file, 'wb') as out:
+                    out.writelines(gz)
+                gz.close()
+                os.remove(filename)
+            except error.URLError as e:
+                print("Something went wrong. Please check given structure ID or Internet connection.")
 
         return final_file
 
@@ -311,7 +318,7 @@ class PDBList(object):
         url = self.pdb_server + '/pub/pdb/derived_data/pdb_seqres.txt'
         _urlretrieve(url, savefile)
 
-    def download_mmcif_file(self, mmcif_code, obsolete=False, pdir=None):
+    def download_mmcif_file(self, pdb_code, obsolete=False, pdir=None):
         """ Retrieves a mmCIF structure file from the PDB server and
         stores it in a local file tree.
 
@@ -320,10 +327,10 @@ class PDBList(object):
 
         To execute function add "mmcif" before further arguments (otherwise will download "small" PBD file by default).
 
-        @param mmcif_code: structure Id from PDB (e.g. 3J92).
-        @type mmcif_code: str
+        @param pdb_code: structure Id from PDB (e.g. 3J92).
+        @type pdb_code: str
 
-        @param obsolete: if true download all obsolete files to created obsolete folder (otherwise folder remains empty)
+        @param obsolete: if true download all obsolete files obsolete folder (otherwise download won't be performed)
         (default: False)
         @type obsolete: bool
 
@@ -334,43 +341,49 @@ class PDBList(object):
         @rtype: str
         """
         # Get the compressed mmCIF structure
-        code = mmcif_code.lower()
-        archive_fn = "%s.cif.gz" % code
-        pdb_dir = "divided" if not obsolete else "obsolete"
-        url = (self.pdb_server +
-               '/pub/pdb/data/structures/%s/mmCIF/%s/%s' %
-               (pdb_dir, code[1:3], archive_fn))
+        if len(pdb_code) != 4:
+            print("ID code must contain only 4 letters")
+        else:
+            try:
+                code = pdb_code.lower()
+                archive_fn = "%s.cif.gz" % code
+                pdb_dir = "divided" if not obsolete else "obsolete"
+                url = (self.pdb_server +
+                       '/pub/pdb/data/structures/%s/mmCIF/%s/%s' %
+                       (pdb_dir, code[1:3], archive_fn))
 
-        # Where does the final mmCIF file get saved?
-        if pdir is None:
-            path = self.local_pdb if not obsolete else self.obsolete_pdb
-            if not self.flat_tree:  # Put in PDB-style directory tree
-                path = os.path.join(path, code[1:3])
-        else:  # Put in specified directory
-            path = pdir
-        if not os.access(path, os.F_OK):
-            os.makedirs(path)
+                # Where does the final mmCIF file get saved?
+                if pdir is None:
+                    path = self.local_pdb if not obsolete else self.obsolete_pdb
+                    if not self.flat_tree:  # Put in PDB-style directory tree
+                        path = os.path.join(path, code[1:3])
+                else:  # Put in specified directory
+                    path = pdir
+                if not os.access(path, os.F_OK):
+                    os.makedirs(path)
 
-        filename = os.path.join(path, archive_fn)
-        final_file = os.path.join(path, "%s.cif" % code)  # (decompressed)
+                filename = os.path.join(path, archive_fn)
+                final_file = os.path.join(path, "%s.cif" % code)  # (decompressed)
 
-        # Skip download if the file already exists
-        if not self.overwrite:
-            if os.path.exists(final_file):
-                print("Structure exists: '%s' " % final_file)
-                return final_file
+                # Skip download if the file already exists
+                if not self.overwrite:
+                    if os.path.exists(final_file):
+                        print("Structure exists: '%s' " % final_file)
+                        return final_file
 
-        # Retrieve the file
-        print("Downloading mmCIF structure '%s'..." % mmcif_code)
-        _urlretrieve(url, filename)
+                # Retrieve the file
+                print("Downloading mmCIF structure '%s'..." % pdb_code)
+                _urlretrieve(url, filename)
 
-        # Uncompress the archive, delete when done
-        # Can't use context manager with gzip.open until Python 2.7
-        gz = gzip.open(filename, 'rb')
-        with open(final_file, 'wb') as out:
-            out.writelines(gz)
-        gz.close()
-        os.remove(filename)
+                # Uncompress the archive, delete when done
+                # Can't use context manager with gzip.open until Python 2.7
+                gz = gzip.open(filename, 'rb')
+                with open(final_file, 'wb') as out:
+                    out.writelines(gz)
+                gz.close()
+                os.remove(filename)
+            except error.URLError as e:
+                print("Something went wrong. Please check given structure ID or Internet connection.")
 
         return final_file
 
@@ -387,7 +400,7 @@ class PDBList(object):
         @param pdb_code: structure Id from PDB (e.g. 3J92).
         @type pdb_code: str
 
-        @param obsolete: if true download all obsolete files to created obsolete folder (otherwise folder remains empty)
+        @param obsolete: if true download all obsolete files obsolete folder (otherwise download won't be performed)
         (default: False)
         @type obsolete: bool
 
@@ -402,48 +415,54 @@ class PDBList(object):
         @rtype: str
         """
         # Get the compressed PDB structure
-        code = pdb_code.lower()
-        archive_fn = "%s-pdb-bundle.tar.gz" % code
-        url = (self.pdb_server +
-               '/pub/pdb/compatible/pdb_bundle/%s/%s/%s' %
-               (code[1:3], code, archive_fn))
-
-        # Where does the final PDB archive file get saved?
-        if pdir is None:
-            path = self.local_pdb if not obsolete else self.obsolete_pdb
-            if not self.flat_tree:  # Put in PDB-style directory tree
-                path = os.path.join(path, code[1:3])
-        else:  # Put in specified directory
-            path = pdir
-        if not os.access(path, os.F_OK):
-            os.makedirs(path)
-
-        filename = os.path.join(path, archive_fn)
-        #if not unzip:
-        final_file = os.path.join(path, "%s-pdb-bundle.tar" % code)  # (compressed)
-
-        # Skip download if the file already exists
-        if not self.overwrite:
-            if os.path.exists(final_file):
-                print("Structure exists: '%s' " % final_file)
-                return final_file
-
-        # Retrieve the file
-        print("Downloading big PDB structure '%s'..." % pdb_code)
-        _urlretrieve(url, filename)
-
-        # Download the tar file
-        if not unzip:
-            gz = gzip.open(filename, 'rb')
-            with open(final_file, 'wb') as out:
-                out.writelines(gz)
-            gz.close()
-            os.remove(filename)
-        # Uncompress the archive, delete when done
+        if len(pdb_code) != 4:
+            print("ID code must contain only 4 letters")
         else:
-            tar = tarfile.open(filename)
-            tar.extractall(path=path)
-            tar.close()
+            try:
+                code = pdb_code.lower()
+                archive_fn = "%s-pdb-bundle.tar.gz" % code
+                url = (self.pdb_server +
+                       '/pub/pdb/compatible/pdb_bundle/%s/%s/%s' %
+                       (code[1:3], code, archive_fn))
+
+                # Where does the final PDB archive file get saved?
+                if pdir is None:
+                    path = self.local_pdb if not obsolete else self.obsolete_pdb
+                    if not self.flat_tree:  # Put in PDB-style directory tree
+                        path = os.path.join(path, code[1:3])
+                else:  # Put in specified directory
+                    path = pdir
+                if not os.access(path, os.F_OK):
+                    os.makedirs(path)
+
+                filename = os.path.join(path, archive_fn)
+                #if not unzip:
+                final_file = os.path.join(path, "%s-pdb-bundle.tar" % code)  # (compressed)
+
+                # Skip download if the file already exists
+                if not self.overwrite:
+                    if os.path.exists(final_file):
+                        print("Structure exists: '%s' " % final_file)
+                        return final_file
+
+                # Retrieve the file
+                print("Downloading big PDB structure '%s'..." % pdb_code)
+                _urlretrieve(url, filename)
+
+                # Download the tar file
+                if not unzip:
+                    gz = gzip.open(filename, 'rb')
+                    with open(final_file, 'wb') as out:
+                        out.writelines(gz)
+                    gz.close()
+                    os.remove(filename)
+                # Uncompress the archive
+                else:
+                    tar = tarfile.open(filename)
+                    tar.extractall(path=path)
+                    tar.close()
+            except error.URLError as e:
+                print("Something went wrong. Please check given structure ID or Internet connection.")
 
         return final_file
 
