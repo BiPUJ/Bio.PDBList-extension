@@ -1,2 +1,1 @@
-# RozszerzenieBio.PDB
-Licencjat + Projekt
+# Bio.PDBList-extension
