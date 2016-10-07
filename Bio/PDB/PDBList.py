@@ -24,7 +24,9 @@
 #   email    : jacek.smietanski@ii.uj.edu.pl
 #
 # This code is released under the conditions of the Biopython license.
-# It may be distributed freely with respect to the original author.
+# Please see the LICENSE file that should have been included as part of this
+# package.
+# It may be distributed freely with respect to the original authors.
 # Any maintainer of the Biopython code may change this notice
 # when appropriate.
 
@@ -42,6 +44,7 @@ import re
 # Importing these functions with leading underscore as not intended for reuse
 from Bio._py3k import urlopen as _urlopen
 from Bio._py3k import urlretrieve as _urlretrieve
+from Bio._py3k import urlcleanup as _urlcleanup
 
 
 class PDBList(object):
@@ -180,12 +183,14 @@ class PDBList(object):
                 obsolete.append(pdb)
         return obsolete
 
-    def retrieve_pdb_file(self, pdb_code, file_format='mmCif', overwrite=False, obsolete=False, pdir=None):
+    def retrieve_pdb_file(self, pdb_code, obsolete=False, pdir=None, file_format='mmCif', overwrite=False):
         """ Retrieves a PDB structure file from the PDB server and
         stores it in a local file tree.
 
         The PDB structure's file name is returned as a single string.
         If obsolete ``==`` True, the file will be saved in a special file tree.
+
+        NOTE. The default download format has changed from PDB to PDBx/mmCif
 
         @param pdb_code: 4-symbols structure Id from PDB (e.g. 3J92).
         @type pdb_code: string
@@ -258,6 +263,7 @@ class PDBList(object):
         # Retrieve the file
         print("Downloading PDB structure '%s'..." % pdb_code)
         try:
+            _urlcleanup()
             _urlretrieve(url, filename)
         except IOError:
             print("Desired structure doesn't exists")
@@ -282,7 +288,7 @@ class PDBList(object):
 
         for pdb_code in new + modified:
             try:
-                self.retrieve_pdb_file(pdb_code, file_format)
+                self.retrieve_pdb_file(pdb_code, file_format=file_format)
             except Exception:
                 print('error %s\n' % pdb_code)
                 # you can insert here some more log notes that
@@ -311,7 +317,7 @@ class PDBList(object):
             else:
                 print("Obsolete file %s is missing" % old_file)
 
-    def download_pdb_files(self, pdb_codes, file_format='mmCif', overwrite=False, obsolete=False, pdir=None):
+    def download_pdb_files(self, pdb_codes, obsolete=False, pdir=None, file_format='mmCif', overwrite=False):
         """ Retrieves a set of PDB structure files from the PDB server and stores them in a local file tree.
 
         The PDB structure's file name is returned as a single string.
@@ -343,32 +349,46 @@ class PDBList(object):
         @rtype: string
         """
         for pdb_code in pdb_codes:
-            self.retrieve_pdb_file(pdb_code, file_format, overwrite, obsolete, pdir)
+            self.retrieve_pdb_file(pdb_code, obsolete=obsolete, pdir=pdir, file_format=file_format, overwrite=overwrite)
 
-    def download_entire_pdb(self, file_format='mmCif', listfile=None):
+    def download_entire_pdb(self, listfile=None, file_format='mmCif'):
         """Retrieve all PDB entries not present in the local PDB copy.
 
-        Writes a list file containing all PDB codes (optional, if listfile is
-        given).
+        @param listfile: filename to which all PDB codes will be written (optional)
+
+        @param file_format: file format. Available options:
+            "mmCif" (default, PDBx/mmCif file),
+            "pdb" (format PDB),
+            "xml" (PMDML/XML format),
+            "mmtf" (highly compressed),
+            "bundle" (PDB formatted archive for large structure}
+
+        NOTE. The default download format has changed from PDB to PDBx/mmCif
         """
         entries = self.get_all_entries()
         for pdb_code in entries:
-            self.retrieve_pdb_file(pdb_code, file_format)
+            self.retrieve_pdb_file(pdb_code, file_format=file_format)
         # Write the list
         if listfile:
             with open(listfile, 'w') as outfile:
                 outfile.writelines((x + '\n' for x in entries))
 
-    def download_obsolete_entries(self, file_format='mmCif', listfile=None):
+    def download_obsolete_entries(self, listfile=None, file_format='mmCif'):
         """Retrieve all obsolete PDB entries not present in the local obsolete
         PDB copy.
 
-        Writes a list file containing all PDB codes (optional, if listfile is
-        given).
+        @param listfile: filename to which all PDB codes will be written (optional)
+
+        @param file_format: file format. Available options:
+            "mmCif" (default, PDBx/mmCif file),
+            "pdb" (format PDB),
+            "xml" (PMDML/XML format),
+
+        NOTE. The default download format has changed from PDB to PDBx/mmCif
         """
         entries = self.get_all_obsolete()
         for pdb_code in entries:
-            self.retrieve_pdb_file(pdb_code, file_format, obsolete=True)
+            self.retrieve_pdb_file(pdb_code, obsolete=True, file_format=file_format)
 
         # Write the list
         if listfile:
@@ -451,10 +471,10 @@ if __name__ == '__main__':
 
         elif len(sys.argv[1]) == 4 and sys.argv[1][0].isdigit():
             # get single PDB entry
-            pl.retrieve_pdb_file(sys.argv[1], file_format=file_format, overwrite=overwrite, pdir=pdb_path)
+            pl.retrieve_pdb_file(sys.argv[1], pdir=pdb_path, file_format=file_format, overwrite=overwrite)
 
         elif sys.argv[1][0] == '(':
             # get a set of PDB entries
             pdb_ids = re.findall(sys.argv[1], "[0-9A-Za-z]{4}")
             for pdb_id in pdb_ids:
-                pl.retrieve_pdb_file(pdb_id, file_format=file_format, overwrite=overwrite, pdir=pdb_path)
+                pl.retrieve_pdb_file(pdb_id, pdir=pdb_path, file_format=file_format, overwrite=overwrite)
