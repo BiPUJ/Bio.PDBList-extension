@@ -3,8 +3,8 @@
 ### Updated and extended module PDBList from the biopython package.
 
 Changes applied:
-1. Possibility to download structures in PDBx/mmCif, PDB, PDBML/XML and
-mmtf formats (both from function and from command line)
+
+1. Possibility to download structures in PDBx/mmCif, PDB, PDBML/XML and mmtf formats (both from function and from command line)
 2. Possibility to download large structures in PDB-like formatted bundles
 3. New function: download specified set of structures
 4. Code is now python 3.x compatible
